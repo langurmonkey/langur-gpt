@@ -9,7 +9,7 @@ from training import plot_loss
 from gpt import GPT
 
 def main():
-    print("How to Train Your GPT\n")
+    print("Langur-GPT\n")
 
     # TINY MODEL (works on CPU, ~2-5 minutes)
     # config = GPTConfig(
