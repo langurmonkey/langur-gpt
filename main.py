@@ -21,7 +21,7 @@ def main():
     # SMALL MODEL (GPT-2 scale, needs GPU)
     config = GPTConfig(
         d_model=768, num_heads=12, num_layers=12, max_seq_len=1024,
-        batch_size=4, grad_accum_steps=8, max_steps=50000,
+        batch_size=8, grad_accum_steps=8, max_steps=50000,
         warmup_steps=2000, learning_rate=3e-4,
     )
 
@@ -39,7 +39,12 @@ def main():
 
     print("Creating model...")
     model = GPT(config)
+    model.to(device)
     print(f"Parameters: {model.get_num_params():,}")
+
+    print("\nCompiling model with torch.compile()...")
+    model = torch.compile(model, mode="reduce-overhead")
+    print("✓ Model compiled!")
 
     print("\n" + "=" * 50)
     print("TRAINING")
