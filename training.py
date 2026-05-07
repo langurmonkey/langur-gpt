@@ -155,7 +155,7 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
     )
 
     use_amp = device.type == "cuda"
-    scaler = torch.cuda.amp.GradScaler(enabled=use_amp) if use_amp else None
+    scaler = torch.amp.GradScaler('cuda', enabled=use_amp) if use_amp else None
 
     step = 0
     total_loss = 0.0
