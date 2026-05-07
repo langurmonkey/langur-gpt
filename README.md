@@ -1,234 +1,168 @@
-# 🧠 How to Train Your GPT
+# Langur GPT
 
-> *A guide to building a world-class language model from absolute scratch. Taught like you're five. Built like you're an engineer.*
+> A modular, from-scratch GPT-style language model implementation — the hands-on code
+> behind [how-to-train-your-gpt](https://github.com/raiyanyahya/how-to-train-your-gpt).
 
-<p align="center">
-  <img src="https://img.shields.io/badge/chapters-12-blue" alt="12 chapters">
-  <img src="https://img.shields.io/badge/lines-3%2C671-green" alt="3,671 lines">
-  <img src="https://img.shields.io/badge/code%20commented-100%25-brightgreen" alt="100% commented">
-  <img src="https://img.shields.io/badge/prerequisite-python%20basics-orange" alt="Python basics only">
-  <img src="https://img.shields.io/badge/architecture-LLaMA%203%20style-purple" alt="LLaMA 3 style">
-</p>
+This is a standalone, **modular refactor** of the concepts from the tutorial. The chapters
+have been split into individually importable files, each representing a real component of a
+modern decoder-only Transformer: tokenizer, RoPE, attention, transformer block, training
+loop, inference — all wired together in a runnable `main.py`.
 
----
+## Architecture
 
-## 📖 What Is This?
+The model implements the **publicly-confirmed best practices** used by LLaMA 3, Mistral,
+and Qwen 2.5:
 
-This is a **12-chapter, 3,671-line interactive textbook** that teaches you how to build, train and run a modern language model from absolute scratch. The same family of architecture behind ChatGPT, Claude, LLaMA and Mistral.
-
-You won't just read about Transformers. You'll **write every line yourself**: tokenizer, embeddings, attention, training loop, inference engine. Every single line annotated to explain **what** it does and **why** it's there.
-
----
-
-## 🤔 Why This Exists
-
-Most ML tutorials fall into one of two traps:
-
-| ❌ Too Shallow | ❌ Too Academic | ✅ This Guide |
+| Technique | What it does | Origin |
 |---|---|---|
-| `model = GPT().fit(data)` | 40-page papers, dense notation | 5-year-old analogies → full working code |
-| You learn to call APIs | Assumes PhD in ML | Zero ML experience required |
-| No understanding of internals | No worked examples | Every line annotated with WHAT & WHY |
+| **RoPE** | Encodes position by rotating Q/K vectors — attention depends on relative distance, not absolute position | LLaMA, Mistral, Qwen |
+| **RMSNorm** | Replaces LayerNorm (15% faster, equally stable) | LLaMA, Gemma |
+| **SwiGLU** | Gated FFN that learns to selectively pass/block information | PaLM, LLaMA, Gemini |
+| **Pre-Norm** | Normalize *before* each sublayer — stable at 100+ layers | All modern Transformers |
+| **Weight Tying** | Shared embedding/LM-head matrix — 30% parameter savings | GPT-2/3 |
+| **AdamW** | Decoupled weight decay — better generalization | GPT-3+ |
+| **Cosine Warmup** | Linear ramp → cosine decay → floor — stable training | GPT-3+ |
+| **Mixed Precision** | FP16/BF16 training — 2x speed, half memory | All production LLMs |
 
-**The goal:** After finishing, you won't just know that attention "works". You'll understand the variance argument behind `1/√d_k`. How RoPE captures relative position through rotation. Why pre-norm beats post-norm for deep networks. And exactly where every gradient flows during backpropagation.
+## File Map
 
----
-
-## 👥 Who Is This For?
-
-| 🧑‍💻 You Are... | 📚 You Need... |
-|---|---|
-| A Python developer curious about how ChatGPT actually works | Basic Python (functions, classes, lists). No ML experience |
-| A student who wants to deeply understand Transformers | Willingness to read ~3,600 lines of commented code |
-| An engineer evaluating LLM architectures | Understanding of tradeoffs (RoPE vs learned, RMSNorm vs LayerNorm) |
-| Someone who got lost at "attention" in other tutorials | Party analogy + worked numeric example with real numbers |
-
-**🔧 Prerequisites:** Python basics (variables, functions, classes, `pip install`). That's it. No calculus, no linear algebra, no PyTorch experience required. We teach those as we go.
-
----
-
-## 🗺️ Chapters
-
-| Chapter | What You'll Learn |
-|---|---|
-| **[0: Overview](chapters/00_overview.md)** | What is a GPT? The big picture |
-| **[1: Setup](chapters/01_setup.md)** | Install tools, GPU vs CPU, venv, PyTorch basics |
-| **[2: Tokenization](chapters/02_tokenization.md)** | BPE walkthrough: how "unbelievably" becomes tokens |
-| **[3: Embeddings](chapters/03_embeddings.md)** | How numbers become meaning. king − man + woman = queen |
-| **[4: Positional Encoding](chapters/04_positional_encoding.md)** | RoPE: why LLaMA rotates vectors, not adds numbers |
-| **[5: Attention](chapters/05_attention.md)** | ⭐ THE CORE. Q,K,V, scaling, causal mask, 8-step walkthrough |
-| **[6: Transformer Block](chapters/06_transformer_block.md)** | RMSNorm, SwiGLU, residuals, pre-norm vs post-norm |
-| **[7: Complete GPT Model](chapters/07_gpt_model.md)** | 124M parameter model, weight tying, logits explained |
-| **[8: Training Pipeline](chapters/08_training.md)** | Cross-entropy, backprop, AdamW, cosine warmup, mixed precision |
-| **[9: Inference](chapters/09_inference.md)** | KV cache, temperature, top-k/p, beam search, repetition penalty |
-| **[10: Full Script](chapters/10_full_script.md)** | Runnable `main.py`: everything in one file |
-| **[11: Glossary](chapters/11_glossary.md)** | Architecture provenance table, parameter breakdown |
-
-> ⭐ **Start with [Chapter 0](chapters/00_overview.md) and read sequentially.** Each builds on the previous.
-
----
-
-## 🏗️ What You'll Build
-
-| 🧩 Component | 📝 Lines | 💡 What You'll Understand |
-|---|---|---|
-| **BPE Tokenizer** | ~60 | How GPT-4 splits "unbelievably" → "un" + "believ" + "ably" |
-| **Embeddings** | ~30 | How "cat" and "dog" end up near each other in 768D space |
-| **RoPE** | ~70 | Why LLaMA rotates vectors instead of adding position numbers |
-| **Multi-Head Attention** | ~120 | The exact 8-step computation behind every modern LLM |
-| **Transformer Block** | ~50 | Why residual connections are the "gradient highway" |
-| **Full GPT Model** | ~200 | 124M parameter model with weight tying and pre-norm |
-| **Training Pipeline** | ~250 | AdamW, cosine warmup, mixed precision, gradient accumulation |
-| **Inference Engine** | ~80 | KV cache, temperature, top-k/p, beam search |
-
-> 💎 **~860 lines of core model code, ~2,800 lines of explanation and diagrams**
-
----
-
-## 🏛️ Architecture
-
-This guide implements the **latest publicly-documented** decoder-only Transformer:
-
-| 🧬 Technique | 📦 Source Model | ⚡ Why It Matters |
-|---|---|---|
-| **RoPE** | LLaMA, Mistral, Qwen | Relative position without learned parameters |
-| **RMSNorm** | LLaMA, Mistral, Gemma | 15% faster than LayerNorm, equally effective |
-| **SwiGLU** | PaLM, LLaMA, Gemini | Learns which information to pass or block |
-| **Pre-Norm** | GPT-3, all modern | Stable training at 100+ layers |
-| **AdamW** | GPT-3+ | Better generalization than vanilla Adam |
-| **BPE** | GPT-2/3/4 | Handles any text. Even unseen words and emoji |
-| **Weight Tying** | GPT-2/3 | Saves 30% parameters, improves training signal |
-| **Mixed Precision** | All production LLMs | 2× speed, half memory, same quality |
-
-> ℹ️ GPT-4 and Claude architectures are proprietary/undisclosed. This teaches the best publicly-confirmed architecture: what LLaMA 3, Mistral and Qwen 2.5 use.
-
----
-
-## 🚀 Quick Start
-
-```bash
-# 1. Clone
-git clone https://github.com/raiyanyahya/how-to-train-your-gpt.git
-cd how-to-train-your-gpt
-
-# 2. Create environment
-python -m venv gpt_env
-source gpt_env/bin/activate          # Mac/Linux
-# gpt_env\Scripts\activate           # Windows
-
-# 3. Install dependencies
-pip install torch tiktoken datasets numpy matplotlib
-
-# 4. Verify GPU (optional but recommended)
-python -c "import torch; print(f'CUDA: {torch.cuda.is_available()}')"
-
-# 5. Start reading!
-open chapters/00_overview.md
+```
+├── main.py           Entry point — train a model, then generate text from prompts
+├── gpt.py            GPT model class — ties together embeddings, Nx transformer blocks,
+│                     final norm, and the LM head with weight tying
+├── gptconfig.py      Dataclass with all hyperparameters in one place
+├── transformer.py    TransformerBlock + RMSNorm + SwiGLU
+├── attention.py      Multi-head self-attention with RoPE, causal mask, fused QKV
+├── rope.py           Rotary Positional Embeddings (precomputed cos/sin cache)
+├── embedding.py      Token embedding lookup with sqrt(d_model) scaling
+├── tokenizer.py      BPE tokenizer wrapping tiktoken (GPT-2 vocabulary)
+├── training.py       Training loop, TextDataset, AdamW optimizer, cosine warmup
+│                     scheduler, checkpointing, loss curve plotting
+├── polyopt.py        Standalone sine-wave fitting experiment (polynomial via SGD)
+├── cudatest.py       Quick GPU availability check
+├── pyproject.toml    Project metadata and dependencies
+└── uv.lock           Lockfile for uv / pip
 ```
 
-To run the full training script, copy `chapters/10_full_script.md` to `main.py` and run:
+### What each component does
+
+**`tokenizer.py`** — Wraps OpenAI's `tiktoken` with the GPT-2 BPE vocabulary
+(50,257 tokens). Handles encode/decode, automatically inserts `<|endoftext|>` markers
+between documents during dataset construction.
+
+**`embedding.py`** — A learnable lookup table mapping each of the 50,257 token IDs to a
+dense vector (768 dimensions in the default config). Scales by `sqrt(d_model)` so that
+embedding magnitudes don't drown out positional information.
+
+**`rope.py`** — Rotary Position Embeddings. Precomputes cos/sin tables for all positions
+up to `max_seq_len`. Instead of adding position numbers, it *rotates* Q and K vectors by
+position-dependent angles. Lower dimensions rotate fast (capture local word order),
+higher dimensions rotate slow (capture long-range relationships).
+
+**`attention.py`** — Multi-head self-attention with a fused QKV projection (one big
+Linear layer → split into Q, K, V — faster on GPU than three separate projections).
+Applies RoPE to Q and K only, computes scaled dot-product attention with a causal
+(lower-triangular) mask, then concatenates heads and projects back.
+
+**`transformer.py`** — One transformer block: pre-norm → attention (+ residual) →
+pre-norm → SwiGLU FFN (+ residual). Includes `RMSNorm` (root-mean-square normalization,
+no mean-centering) and `SwiGLU` (gated activation: SiLU(w1(x)) * w2(x)).
+
+**`gpt.py`** — The full model. Stacks N `TransformerBlock` layers, applies final
+normalization, projects to vocabulary via the LM head. Weight tying shares the
+embedding matrix with the LM head. Includes the inference method (`generate`) with
+temperature, top-k, and top-p sampling.
+
+**`gptconfig.py`** — Single dataclass defining model architecture (vocab size, d_model,
+layers, heads, max_seq_len) and training hyperparameters (LR, batch size, warmup steps,
+weight decay, etc.). Also validates that d_model is divisible by num_heads.
+
+**`training.py`** — The full training pipeline:
+- `TextDataset`: concatenates documents with EOS separators, yields shifted
+  input/target pairs for next-token prediction (teacher forcing)
+- `CosineWarmupScheduler`: three-phase LR schedule (linear warmup → cosine decay → floor)
+- `create_optimizer`: AdamW with separate parameter groups (weight decay on weights only,
+  none on biases/norms)
+- `train`: the main loop — forward/backward/update with gradient accumulation, mixed
+  precision (AMP), gradient clipping, periodic logging, and checkpointing
+- `plot_loss`: renders a loss curve to `loss_curve.png`
+
+**`main.py`** — Entry point. Loads the Wikitext-103 dataset, creates the model, runs the
+training loop, then generates continuations from a few example prompts. Saves the final
+model to `checkpoints/model.pt`.
+
+**`polyopt.py`** — A standalone script that fits a 7th-degree polynomial to sin(x) using
+AdamW. Not part of the GPT pipeline — it's a minimal PyTorch exercise included for
+learning purposes.
+
+**`cudatest.py`** — Prints PyTorch version and CUDA availability. Run this first to
+verify your GPU setup.
+
+## Quick Start
 
 ```bash
+# 1. Create environment (Python 3.12+)
+uv venv
+source .venv/bin/activate       # or: .venv\Scripts\activate (Windows)
+
+# 2. Install dependencies
+uv pip install -r <(uv pip compile pyproject.toml)   # with uv
+# or: pip install torch tiktoken datasets numpy matplotlib
+
+# 3. Verify GPU
+python cudatest.py
+
+# 4. Train!
 python main.py
 ```
 
-**📊 Expected output (RTX 3090, ~2 hours):**
-```
-GPT initialized with 124,439,808 parameters
-Training starting!
-Step    100/50,000 | Loss: 6.2345 | LR: 1.50e-05 | Toks/sec: 45,000
-Step    200/50,000 | Loss: 5.1234 | LR: 3.00e-05 | Toks/sec: 45,200
-...
-Step 50,000/50,000 | Loss: 2.8901 | LR: 1.00e-05 | Toks/sec: 44,800
-✅ Training complete! 112.3 min | Best loss: 2.8901
-```
+### Two configurations
 
-> 💻 **On CPU only** (~10-50× slower): Use the "tiny" config in [Chapter 10](chapters/10_full_script.md).
-
----
-
-## 📖 How to Read
-
-Each chapter follows the same **4-step structure**:
-
-| Step | Format | Purpose |
-|---|---|---|
-| 1️⃣ **Analogy** | Plain English, 5-year-old level | Build intuition before math |
-| 2️⃣ **Worked Example** | Real numbers traced through | See exactly what happens |
-| 3️⃣ **Annotated Code** | Every line: `WHAT` + `WHY` | Understand every decision |
-| 4️⃣ **Diagram** | Mermaid flowchart or ASCII | Visualize data flow |
-
-> 💡 **Tip:** Lost in the code? Jump back to the analogy. Confused by the math? Skip to the worked example.
-
----
-
-## ✨ What Makes This Different
-
-| Aspect | 😴 Typical Tutorial | 🔥 This Guide |
-|---|---|---|
-| **Explanation depth** | "Attention helps the model focus" | 8-step worked example with real numbers + variance math + causal mask visualization |
-| **Code comments** | Few or none | Every single line: WHAT + WHY |
-| **Modern techniques** | GPT-2 style (2019) | LLaMA 3 style (2024): RoPE, RMSNorm, SwiGLU |
-| **Training** | Uses HuggingFace Trainer | Full custom loop: AdamW, cosine warmup, mixed precision, grad accumulation |
-| **Inference** | `model.generate()` | Temperature, top-k, top-p, beam search, KV cache explained |
-| **Target audience** | ML engineers | Python developers with zero ML experience |
-| **Diagrams** | None | Mermaid flowcharts + ASCII matrices + worked examples |
-
----
-
-## 🎯 Skills You'll Gain
-
-- ✅ Explain how GPT-4 tokenizes text using BPE
-- ✅ Understand why RoPE, RMSNorm and SwiGLU replaced older techniques
-- ✅ Compute attention scores manually for a 3-token sentence
-- ✅ Debug a Transformer training loop (loss spikes, flat lines, overfitting)
-- ✅ Choose sampling parameters (temperature, top_k, top_p) for different use cases
-- ✅ Understand why KV caching is critical for production inference
-- ✅ Read modern ML papers with confidence (you'll recognize every component)
-
----
-
-## 🔮 Next Steps After Finishing
-
-| Experiment | What to Change | What You'll Learn |
-|---|---|---|
-| **Bigger model** | `num_layers` 12 → 24 | How depth improves reasoning |
-| **More data** | Add BookCorpus, C4, The Pile | Impact of data quality and diversity |
-| **Flash Attention** | Install `flash-attn`, swap attention | 2-5× faster training, longer context |
-| **Grouped Query Attention** | Set `num_kv_heads` < `num_heads` | How Mistral achieves efficient inference |
-| **LoRA fine-tuning** | Add low-rank adapter layers | Customize models without full retraining |
-| **RLHF / DPO** | Add reward model training | How ChatGPT learns to follow instructions |
-| **KV Cache** | Implement persistent key-value storage | 500× faster text generation |
-| **Mixture of Experts** | Route tokens through different FFN experts | How GPT-4 scales to trillions of params |
-
----
-
-## 📁 File Structure
+**Small model (GPT-2 scale)** — default, requires a GPU (~2 hours on an RTX 3090):
 
 ```
-📦 how-to-train-your-gpt/
-├── 📄 README.md              ← You are here
-└── 📂 chapters/
-    ├── 🏠 00_overview.md     ← What is a GPT? Why build one?
-    ├── 🔧 01_setup.md        ← Install tools, GPU vs CPU, venv basics
-    ├── 🔪 02_tokenization.md ← BPE walkthrough, EOS tokens, emoji handling
-    ├── 🧊 03_embeddings.md   ← How numbers become meaning, king − man + woman
-    ├── 📍 04_positional_encoding.md ← RoPE math, numerical example, theta
-    ├── 🧠 05_attention.md    ← ⭐ THE CORE (713 lines). Q,K,V, scaling, causal mask
-    ├── 🧱 06_transformer_block.md ← RMSNorm, SwiGLU, residuals, pre-norm vs post
-    ├── 🏗️ 07_gpt_model.md    ← Complete 124M model, weight tying, logits explained
-    ├── 🏋️ 08_training.md     ← Cross-entropy, backprop, AdamW, cosine warmup
-    ├── 🎤 09_inference.md    ← KV cache, temperature, top-k/p, beam search
-    ├── 📜 10_full_script.md  ← Runnable main.py
-    └── 📊 11_glossary.md     ← Architecture provenance, parameter breakdown
+d_model=768, num_heads=12, num_layers=12, max_seq_len=1024
+batch_size=4, grad_accum=8, max_steps=50,000
 ```
 
----
+**Tiny model (CPU-friendly)** — swap the config in `main.py` (uncomment the tiny block,
+comment the small block):
 
-<p align="center">
-  <i>"Any sufficiently explained technology is indistinguishable from magic. Until you build it yourself."</i>
-</p>
+```
+d_model=256, num_heads=4, num_layers=4, max_seq_len=128
+batch_size=4, grad_accum=2, max_steps=500
+```
 
-<p align="center">
-  <sub>⭐ Star this repo if you found it useful | 🐛 Issues & PRs welcome | 📖 Happy learning!</sub>
-</p>
+### Output
+
+After training, the script:
+1. Logs loss every 100 steps with tokens/sec throughput
+2. Saves a loss curve to `loss_curve.png`
+3. Generates text continuations from three example prompts
+4. Saves the trained model to `checkpoints/model.pt`
+5. Saves periodic checkpoints to `checkpoints/checkpoint_step_{N}.pt`
+
+Expected loss trajectory (GPT-2 scale):
+```
+Step    100/50,000 | Loss: 6.23
+Step    500/50,000 | Loss: 4.85
+Step  5,000/50,000 | Loss: 3.42
+Step 50,000/50,000 | Loss: ~2.89
+```
+
+## Why
+
+Most ML tutorials show you how to call `model.fit()` or `model.generate()`. This
+codebase does the opposite — every line is annotated with **what** it does and **why**
+it's there, so you can read the files in any order and understand the full pipeline.
+It's the working implementation that results from working through
+[how-to-train-your-gpt](https://github.com/raiyanyahya/how-to-train-your-gpt).
+
+## Next Steps / Experiments
+
+- **Bigger model** — increase `num_layers` to 24 or `d_model` to 1024
+- **Grouped Query Attention** — add `num_kv_heads` (like Mistral)
+- **Flash Attention** — swap the attention module for `flash-attn`
+- **LoRA** — add low-rank adapter layers for efficient fine-tuning
+- **KV Cache** — implement persistent key-value caching for faster inference
+- **Mixture of Experts** — route tokens through different FFNs (like GPT-4)
