@@ -10,5 +10,6 @@ dependencies = [
     "numpy>=2.4.4",
     "tiktoken>=0.12.0",
     "torch>=2.11.0",
-    "triton"
+    "tqdm>=4.67.3",
+    "triton",
 ]
