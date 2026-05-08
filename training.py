@@ -173,6 +173,12 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
             if step >= config.max_steps:
                 break
 
+            # ===== CUDA GRAPH STEP MARKING (for torch.compile()) =====
+            # WHAT: Tell torch.compile() that a new iteration is starting
+            # WHY: Prevents CUDA graph conflicts with gradient accumulation
+            if device.type == "cuda":
+                torch.compiler.cudagraph_mark_step_begin()
+
             input_ids = input_ids.to(device, non_blocking=True)
             target_ids = target_ids.to(device, non_blocking=True)
 
