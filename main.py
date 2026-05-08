@@ -14,7 +14,7 @@ def main():
     # TINY MODEL (works on CPU, ~2-5 minutes)
     # config = GPTConfig(
     #     d_model=256, num_heads=4, num_layers=4, max_seq_len=128,
-    #     batch_size=4, grad_accum_steps=2, max_steps=500,
+    #     batch_size=8, grad_accum_steps=2, max_steps=500,
     #     warmup_steps=50, learning_rate=3e-4,
     # )
 
@@ -41,10 +41,6 @@ def main():
     model = GPT(config)
     model.to(device)
     print(f"Parameters: {model.get_num_params():,}")
-
-    print("\nCompiling model with torch.compile()...")
-    model = torch.compile(model, mode="reduce-overhead")
-    print("✓ Model compiled!")
 
     print("\n" + "=" * 50)
     print("TRAINING")
