@@ -245,14 +245,17 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
                     gpu_mem = f" | GPU: {allocated:.1f}GB"
 
                 # Update progress bar with metrics
-                pbar.update(1)
-                pbar.set_postfix({
+                postfix_dict = {
                     "Loss": f"{avg_loss:.4f}",
                     "LR": f"{scheduler.get_lr():.2e}",
                     "Toks/s": f"{tps:.1f}K",
                     "ETA": f"{eta_hours:.1f}h",
-                    **{"GPU": f"{allocated:.1f}GB"} if device.type == "cuda" else {}
-                })
+                }
+                if device.type == "cuda":
+                    postfix_dict["GPU"] = f"{allocated:.1f}GB"
+                
+                pbar.update(1)
+                pbar.set_postfix(postfix_dict)
 
                 # Update loss history
                 if step % 100 == 0 or step == 1:
