@@ -172,7 +172,7 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
     if checkpoint_files:
         latest_checkpoint_path = checkpoint_files[-1]
         print(f"Found checkpoint: {latest_checkpoint_path}. Resuming training...")
-        checkpoint = torch.load(latest_checkpoint_path, map_location=device)
+        checkpoint = torch.load(latest_checkpoint_path, map_location=device, weights_only=False)
         
         step = checkpoint["step"]
         model.load_state_dict(checkpoint["model_state_dict"])
@@ -234,14 +234,7 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
             else:
                 loss.backward()
 
-            # Accumulate loss for logging, adjust by grad_accum_steps
-            # total_loss += loss.item() * config.grad_accum_steps # This line was correct before
-
-            # Calculate the loss for logging correctly *before* gradient accumulation division
-            # Each loss.item() here is already a loss/grad_accum_steps value.
-            # So, multiply by grad_accum_steps to get the true per-batch loss.
-            if step < original_start_step + 10: # Only consider loss after resuming to re-establish moving average
-                total_loss += loss.item() * config.grad_accum_steps
+            total_loss += loss.item() * config.grad_accum_steps
 
 
             # ===== UPDATE: Every grad_accum_steps, optimize =====
@@ -260,22 +253,27 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
                 step += 1
 
                 # ===== ACCURATE ETA CALCULATION =====
-                # Skip warmup steps for ETA (they're artificially fast)
                 elapsed = time.time() - start_time
+
+                # warmup_end_step was undefined — fix: it's simply config.warmup_steps
+                warmup_end_step = config.warmup_steps
+
+                # Case 1: Resumed after warmup is already done → start stable tracking immediately
+                if stable_step_start is None and step >= warmup_end_step:
+                    stable_step_start = step
+                    stable_time_start = elapsed
                 
-                if step == warmup_end_step:
-                    # Start tracking "stable" speed after warmup
+                # Case 2: Just finished warmup during this session
+                elif stable_step_start is None and step == warmup_end_step:
                     stable_step_start = step
                     stable_time_start = elapsed
                     pbar.write(f"💡 Warmup complete, ETA will be accurate from now on")
                 
                 if stable_step_start is not None:
-                    # Use speed from after-warmup period only
                     stable_elapsed = elapsed - stable_time_start
                     stable_steps = step - stable_step_start
                     seconds_per_step = stable_elapsed / stable_steps if stable_steps > 0 else 0
                 else:
-                    # Still in warmup, show "calculating"
                     seconds_per_step = 0
                 
                 if seconds_per_step > 0:
@@ -284,6 +282,7 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
                     eta_hours = eta_seconds / 3600
                 else:
                     eta_hours = 0
+
                 
                 # Tokens per second
                 tokens_per_batch = config.batch_size * config.grad_accum_steps * config.max_seq_len
