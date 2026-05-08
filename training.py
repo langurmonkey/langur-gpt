@@ -4,6 +4,7 @@ import math
 import torch
 from torch.utils.data import Dataset
 from datasets import load_dataset
+from tqdm import tqdm
 
 class TextDataset(Dataset):
     """
@@ -162,16 +163,24 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
     loss_history = []
     best_loss = float("inf")
     start_time = time.time()
+    batch_times = []
+    max_batch_times = 20  # Keep rolling average of last 20 batches
 
-    print(f"\n{'='*60}")
+    print(f"\n{'='*70}")
     print(f"Training! Params: {model.get_num_params():,} | Device: {device}")
     print(f"Effective batch: {config.batch_size * config.grad_accum_steps}")
-    print(f"{'='*60}\n")
+    print(f"Max steps: {config.max_steps:,}")
+    print(f"{'='*70}\n")
+
+    # Create progress bar
+    pbar = tqdm(total=config.max_steps, desc="Training", unit="step", dynamic_ncols=True)
 
     while step < config.max_steps:
         for batch_idx, (input_ids, target_ids) in enumerate(dataloader):
             if step >= config.max_steps:
                 break
+
+            batch_start = time.time()
 
             # ===== CUDA GRAPH STEP MARKING (for torch.compile()) =====
             # WHAT: Tell torch.compile() that a new iteration is starting
@@ -210,15 +219,43 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
                 scheduler.step()
                 step += 1
 
-                # Logging every 100 steps
+                batch_time = time.time() - batch_start
+                batch_times.append(batch_time)
+                if len(batch_times) > max_batch_times:
+                    batch_times.pop(0)
+
+                # ===== UPDATE PROGRESS BAR =====
+                elapsed = time.time() - start_time
+                avg_batch_time = sum(batch_times) / len(batch_times)
+                steps_remaining = config.max_steps - step
+                eta_seconds = steps_remaining * avg_batch_time
+                eta_hours = eta_seconds / 3600
+                
+                # Tokens per second
+                tokens_per_batch = config.batch_size * config.grad_accum_steps * config.max_seq_len
+                tps = tokens_per_batch / avg_batch_time / 1000  # in thousands
+                
+                # Current loss (moving average)
+                avg_loss = total_loss / (100 if step > 100 else step)
+                
+                # GPU memory (if available)
+                gpu_mem = ""
+                if device.type == "cuda":
+                    allocated = torch.cuda.memory_allocated(device) / 1024**3
+                    gpu_mem = f" | GPU: {allocated:.1f}GB"
+
+                # Update progress bar with metrics
+                pbar.update(1)
+                pbar.set_postfix({
+                    "Loss": f"{avg_loss:.4f}",
+                    "LR": f"{scheduler.get_lr():.2e}",
+                    "Toks/s": f"{tps:.1f}K",
+                    "ETA": f"{eta_hours:.1f}h",
+                    **{"GPU": f"{allocated:.1f}GB"} if device.type == "cuda" else {}
+                })
+
+                # Update loss history
                 if step % 100 == 0 or step == 1:
-                    avg_loss = total_loss / (100 if step > 0 else 1)
-                    elapsed = time.time() - start_time
-                    tps = (step * config.batch_size * config.grad_accum_steps
-                           * config.max_seq_len) / elapsed
-                    print(f"Step {step:>6,}/{config.max_steps:,} | "
-                          f"Loss: {avg_loss:.4f} | LR: {scheduler.get_lr():.2e} | "
-                          f"Toks/sec: {tps:,.0f}")
                     loss_history.append((step, avg_loss))
                     total_loss = 0.0
 
@@ -231,15 +268,18 @@ def train(model, train_dataset, config, device, save_dir="checkpoints"):
                         "loss": avg_loss, "config": config,
                     }
                     torch.save(checkpoint, f"{save_dir}/checkpoint_step_{step}.pt")
-                    print(f"   Saved checkpoint at step {step}")
+                    pbar.write(f"💾 Saved checkpoint at step {step} | Best: {best_loss:.4f}")
                     if avg_loss < best_loss:
                         best_loss = avg_loss
                         torch.save(checkpoint, f"{save_dir}/best_model.pt")
+                        pbar.write(f"🎯 New best loss: {best_loss:.4f}")
+
+    pbar.close()
 
     total_time = time.time() - start_time
-    print(f"\n{'='*60}")
-    print(f"Done! {total_time/60:.1f} min | Best loss: {best_loss:.4f}")
-    print(f"{'='*60}\n")
+    print(f"\n{'='*70}")
+    print(f"✅ Done! {total_time/60:.1f} min ({total_time/3600:.2f} hours) | Best loss: {best_loss:.4f}")
+    print(f"{'='*70}\n")
     return loss_history
 
 
