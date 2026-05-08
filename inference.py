@@ -143,17 +143,17 @@ class GPTInference:
     ):
         """
         Interactive generation: keep prompting until user quits.
-        Type 'quit' or 'exit' to stop.
+        Type '/quit' or '/exit' to stop.
         """
         print(f"\n{'=' * 60}")
         print("Interactive Generation Mode")
-        print("Type 'quit' or 'exit' to stop")
+        print("Type '/quit' or '/exit' to stop")
         print(f"{'=' * 60}\n")
 
         while True:
             prompt = input("Prompt: ").strip()
 
-            if prompt.lower() in ["quit", "exit", "q"]:
+            if prompt.lower() in ["/quit", "/exit", "/q"]:
                 print("Goodbye!")
                 break
 
