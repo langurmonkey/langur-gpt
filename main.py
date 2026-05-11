@@ -22,7 +22,7 @@ def main():
     config = GPTConfig(
         d_model=768, num_heads=12, num_layers=12, max_seq_len=1024,
         batch_size=4, grad_accum_steps=8, max_steps=50000,
-        warmup_steps=2000, learning_rate=3e-4,
+        warmup_steps=2000, learning_rate=3e-4, max_samples=20000,
     )
 
     if torch.cuda.is_available():
@@ -34,7 +34,7 @@ def main():
 
     tokenizer = SimpleTokenizer()
     print("Loading training data...")
-    texts = load_training_data(max_samples=5000)
+    texts = load_training_data(max_samples=config.max_samples)
     train_dataset = TextDataset(texts, tokenizer, max_seq_len=config.max_seq_len)
 
     print("Creating model...")

@@ -7,6 +7,10 @@ class GPTConfig:
     WHAT: All hyperparameters in one place.
     WHY: Changing model size is one line. No hunting through code.
     """
+
+    # ===== Training dataset =====
+    max_samples: int = 10000       # WHAT: Max number of samples of the dataset to use for training
+
     # ===== Architecture =====
     vocab_size: int = 50257        # WHAT: 50,257 unique tokens in GPT-2 vocabulary
     d_model: int = 768             # WHAT: Each token becomes a 768-dim vector
