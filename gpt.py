@@ -2,8 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from gptconfig import GPTConfig
-from transformer import RMSNorm
-from transformer import TransformerBlock
+from transformer import RMSNorm, TransformerBlock
 from attention import create_causal_mask
 
 
