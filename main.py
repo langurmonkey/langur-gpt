@@ -15,13 +15,13 @@ def main():
     # config = GPTConfig(
     #     d_model=256, num_heads=4, num_layers=4, max_seq_len=128,
     #     batch_size=8, grad_accum_steps=2, max_steps=500,
-    #     warmup_steps=50, learning_rate=3e-4,
+    #     warmup_steps=50, learning_rate=3e-4, max_samples=5000,
     # )
 
     # SMALL MODEL (GPT-2 scale, needs GPU)
     config = GPTConfig(
         d_model=768, num_heads=12, num_layers=12, max_seq_len=1024,
-        batch_size=4, grad_accum_steps=8, max_steps=50000,
+        batch_size=4, grad_accum_steps=8, max_steps=100000,
         warmup_steps=2000, learning_rate=3e-4, max_samples=20000,
     )
 
